@@ -36,7 +36,7 @@ REINICIO_HORARIOS = ["03:00", "11:00", "19:00"]
 @bot.event
 async def on_ready():
     print(f"Bot conectado como {bot.user}")
-    bot.loop.create_task(programar_reinicios())  # Inicia los reinicios automáticos
+    bot.loop.create_task programar_reinicios()  # Inicia los reinicios automáticos
     await iniciar_embed_fijo()  # Envía el embed fijo al canal al iniciar el bot
 
 
