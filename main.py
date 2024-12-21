@@ -199,7 +199,7 @@ def home():
 
 
 def run():
-    app.run(host="0.0.0.0", port=8080)
+    app.run(host="192.168.18.166", port=25565)
 
 
 t = Thread(target=run)
