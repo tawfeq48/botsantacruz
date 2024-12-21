@@ -16,7 +16,7 @@ TOKEN = os.getenv("TOKEN")
 
 # Configuración del bot
 MAX_LIMIT = 5000  # Límite máximo de objetos
-CHANNEL_ID = 1319357125012754543  # ID del canal principal (embed fijo)
+CHANNEL_ID = 1319817672682373120  # ID del canal principal (embed fijo)
 NOTIFICATION_CHANNEL_ID = 1319808831055990946  # ID del canal para notificaciones importantes
 
 # Inicialización del bot
