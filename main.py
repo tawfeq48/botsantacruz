@@ -32,6 +32,45 @@ proximo_reinicio = None  # Variable para el próximo reinicio
 # Horarios de reinicio (en horario español peninsular)
 REINICIO_HORARIOS = ["03:00", "11:00", "19:00"]
 
+async def programar_reinicios():
+    """Programa los reinicios automáticos en los horarios definidos."""
+    global total_count, registro_ventas, proximo_reinicio
+    while True:
+        now = datetime.now(pytz.timezone("Europe/Madrid"))
+        reinicio_horas = [
+            datetime.strptime(h, "%H:%M").replace(
+                year=now.year, month=now.month, day=now.day, tzinfo=pytz.timezone("Europe/Madrid")
+            )
+            for h in REINICIO_HORARIOS
+        ]
+
+        # Encuentra el próximo reinicio
+        proximos = [h for h in reinicio_horas if h > now]
+        if not proximos:
+            proximos = [h + timedelta(days=1) for h in reinicio_horas]
+
+        proximo_reinicio = min(proximos)
+        tiempo_restante = (proximo_reinicio - now).total_seconds()
+
+        # Notificación 5 minutos antes del reinicio
+        await asyncio.sleep(tiempo_restante - 300)
+        notification_channel = bot.get_channel(NOTIFICATION_CHANNEL_ID)
+        if notification_channel:
+            registro = "\n".join([
+                f"{vendedor}: {cantidad} objetos ({fecha.strftime('%d/%m/%Y %H:%M')})"
+                for vendedor, cantidad, fecha in registro_ventas
+            ]) or "No hay registros."
+            await notification_channel.send(
+                f"¡El reinicio automático ocurrirá en 5 minutos!\n\n**Registro de Ventas:**\n{registro}"
+            )
+
+        # Esperar hasta el reinicio
+        await asyncio.sleep(300)
+
+        # Reinicia el total y el registro de ventas
+        total_count = 0
+        registro_ventas = []
+        await actualizar_embed_fijo()
 
 @bot.event
 async def on_ready():
