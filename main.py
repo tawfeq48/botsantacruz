@@ -32,6 +32,14 @@ proximo_reinicio = None  # Variable para el próximo reinicio
 # Horarios de reinicio (en horario español peninsular)
 REINICIO_HORARIOS = ["03:00", "11:00", "19:00"]
 
+
+@bot.event
+async def on_ready():
+    print(f"Bot conectado como {bot.user}")
+    bot.loop.create_task(programar_reinicios())  # Inicia los reinicios automáticos
+    await iniciar_embed_fijo()  # Envía el embed fijo al canal al iniciar el bot
+
+
 async def programar_reinicios():
     """Programa los reinicios automáticos en los horarios definidos."""
     global total_count, registro_ventas, proximo_reinicio
@@ -71,12 +79,6 @@ async def programar_reinicios():
         total_count = 0
         registro_ventas = []
         await actualizar_embed_fijo()
-
-@bot.event
-async def on_ready():
-    print(f"Bot conectado como {bot.user}")
-    bot.loop.create_task(programar_reinicios())  # Inicia los reinicios automáticos
-    await iniciar_embed_fijo()  # Envía el embed fijo al canal al iniciar el bot
 
 
 async def iniciar_embed_fijo():
@@ -172,83 +174,6 @@ class SumarView(discord.ui.View):
             await interaction.followup.send(
                 "No respondiste a tiempo. Intenta nuevamente.", ephemeral=True
             )
-
-
-async def actualizar_embed_fijo():
-    """Actualiza el embed fijo con el nuevo total y muestra el registro de ventas."""
-    global embed_message
-    channel = bot.get_channel(CHANNEL_ID)
-    if embed_message is None or channel is None:
-        return
-
-    registro = "\n".join(
-        [
-            f"{vendedor}: {cantidad} objetos ({fecha.strftime('%d/%m/%Y %H:%M')})"
-            for vendedor, cantidad, fecha in registro_ventas
-        ]
-    )
-    if not registro:
-        registro = "No hay registros de ventas aún."
-
-    embed = discord.Embed(
-        title="Seguimiento de Ventas",
-        description=f"Total actual: **{total_count}/{MAX_LIMIT}**\n\nHaz clic en el botón para sumar.",
-        color=discord.Color.blue(),
-    )
-    embed.add_field(name="Registro de Ventas", value=registro, inline=False)
-
-    view = SumarView()
-    await embed_message.edit(embed=embed, view=view)
-
-
-async def enviar_notificacion_limite():
-    """Envía una notificación al canal de notificaciones importantes con el registro de ventas."""
-    notification_channel = bot.get_channel(NOTIFICATION_CHANNEL_ID)
-    if notification_channel is None:
-        print(f"No se encontró el canal con ID: {NOTIFICATION_CHANNEL_ID}")
-        return
-
-    registro = "\n".join(
-        [
-            f"{vendedor}: {cantidad} objetos ({fecha.strftime('%d/%m/%Y %H:%M')})"
-            for vendedor, cantidad, fecha in registro_ventas
-        ]
-    )
-    if not registro:
-        registro = "No hay registros de ventas."
-
-    embed = discord.Embed(
-        title="¡Se alcanzó el límite máximo!",
-        description=f"Se alcanzó el límite de **{MAX_LIMIT}** objetos.\n\n**Registro de Ventas:**\n{registro}",
-        color=discord.Color.red(),
-    )
-    await notification_channel.send(embed=embed)
-
-
-async def programar_reinicios():
-    """Programa los reinicios automáticos en los horarios definidos."""
-    global total_count, registro_ventas, proximo_reinicio
-    while True:
-        now = datetime.now(pytz.timezone("Europe/Madrid"))
-        reinicio_horas = [
-            datetime.strptime(h, "%H:%M").replace(
-                year=now.year, month=now.month, day=now.day, tzinfo=pytz.timezone("Europe/Madrid")
-            )
-            for h in REINICIO_HORARIOS
-        ]
-
-        proximos = [h for h in reinicio_horas if h > now]
-        if not proximos:
-            proximos = [h + timedelta(days=1) for h in reinicio_horas]
-
-        proximo_reinicio = min(proximos)
-        tiempo_restante = (proximo_reinicio - now).total_seconds()
-
-        await asyncio.sleep(tiempo_restante)
-
-        total_count = 0
-        registro_ventas = []
-        await actualizar_embed_fijo()
 
 
 # Comando para reinicio manual
