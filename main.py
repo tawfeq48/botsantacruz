@@ -3,7 +3,6 @@ from discord.ext import commands, tasks
 import asyncio
 from datetime import datetime, timedelta
 import pytz
-from flask import Flask
 from threading import Thread
 import os
 
@@ -292,21 +291,6 @@ async def borrar(ctx, cantidad: str = None):
             await msg.delete()
 
 
-# Servidor Flask para mantener Replit activo
-app = Flask('')
-
-
-@app.route('/')
-def home():
-    return "¡El bot está activo!"
-
-
-def run():
-    app.run(host='0.0.0.0', port=8.8.8.8)
-
-
-t = Thread(target=run)
-t.start()
 
 # Ejecuta el bot
 bot.run(TOKEN)
