@@ -7,7 +7,7 @@ from flask import Flask
 from threading import Thread
 
 # Configuración del bot
-TOKEN = "MTI4NjM3NjU3ODE2MjM2NDQ5Ng.Gif5sT.m35kIo7PCMQK1y2W7odfsJfq-3TOeD5fAFX3lI"
+TOKEN = "MTI4NjM3NjU3ODE2MjM2NDQ5Ng.G2sMIp.6y5oExmLCxWp-tX_P1DuOMqQ2xCvWizqDCfA9I"
 MAX_LIMIT = 5000  # Límite máximo de objetos
 CHANNEL_ID = 1319817672682373120  # ID del canal principal (embed fijo)
 NOTIFICATION_CHANNEL_ID = 1319808831055990946  # ID del canal para notificaciones importantes
