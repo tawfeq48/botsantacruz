@@ -8,13 +8,11 @@ from threading import Thread
 from dotenv import load_dotenv
 import os
 
-# Cargar variables de entorno desde .env
+# Cargar variables de entorno desde el archivo .env
 load_dotenv()
 
-# Obtener el token del bot desde las variables de entorno
-TOKEN = os.getenv("TOKEN")
-
 # Configuración del bot
+TOKEN = os.getenv("TOKEN")  # Token del bot desde el archivo .env
 MAX_LIMIT = 5000  # Límite máximo de objetos
 CHANNEL_ID = 1319817672682373120  # ID del canal principal (embed fijo)
 NOTIFICATION_CHANNEL_ID = 1319808831055990946  # ID del canal para notificaciones importantes
@@ -77,14 +75,14 @@ class SumarView(discord.ui.View):
             embed = discord.Embed(
                 title="Límite alcanzado",
                 description=f"El total de {MAX_LIMIT} objetos ha sido alcanzado. No se pueden sumar más objetos hasta el próximo reinicio.",
-                color=discord.Color.red()
+                color=discord.Color.red(),
             )
             await interaction.response.send_message(embed=embed, ephemeral=True)
             return
 
         await interaction.response.send_message(
             "Por favor, escribe la cantidad que quieres sumar en el chat.",
-            ephemeral=True
+            ephemeral=True,
         )
 
         def check(m):
@@ -99,18 +97,22 @@ class SumarView(discord.ui.View):
             await msg.delete()
 
             if cantidad <= 0:
-                await interaction.followup.send("Por favor, ingresa una cantidad positiva.", ephemeral=True)
+                await interaction.followup.send(
+                    "Por favor, ingresa una cantidad positiva.", ephemeral=True
+                )
                 return
 
             if total_count + cantidad > MAX_LIMIT:
                 await interaction.followup.send(
                     f"No puedes agregar esa cantidad porque excede el límite máximo de {MAX_LIMIT}.",
-                    ephemeral=True
+                    ephemeral=True,
                 )
                 return
 
             total_count += cantidad
-            registro_ventas.append((msg.author.name, cantidad, datetime.now(pytz.timezone('Europe/Madrid'))))  # Ajusta la hora a CET
+            registro_ventas.append(
+                (msg.author.name, cantidad, datetime.now(pytz.timezone("Europe/Madrid")))
+            )
 
             # Notifica si se alcanza el límite
             if total_count >= MAX_LIMIT:
@@ -119,12 +121,18 @@ class SumarView(discord.ui.View):
             # Actualiza el embed fijo
             await actualizar_embed_fijo()
 
-            await interaction.followup.send(f"Se sumaron {cantidad} objetos correctamente.", ephemeral=True)
+            await interaction.followup.send(
+                f"Se sumaron {cantidad} objetos correctamente.", ephemeral=True
+            )
 
         except ValueError:
-            await interaction.followup.send("La cantidad ingresada no es un número válido.", ephemeral=True)
+            await interaction.followup.send(
+                "La cantidad ingresada no es un número válido.", ephemeral=True
+            )
         except asyncio.TimeoutError:
-            await interaction.followup.send("No respondiste a tiempo. Intenta nuevamente.", ephemeral=True)
+            await interaction.followup.send(
+                "No respondiste a tiempo. Intenta nuevamente.", ephemeral=True
+            )
 
 
 async def actualizar_embed_fijo():
@@ -134,10 +142,12 @@ async def actualizar_embed_fijo():
     if embed_message is None or channel is None:
         return
 
-    registro = "\n".join([
-        f"{vendedor}: {cantidad} objetos ({fecha.strftime('%d/%m/%Y %H:%M')})"
-        for vendedor, cantidad, fecha in registro_ventas
-    ])
+    registro = "\n".join(
+        [
+            f"{vendedor}: {cantidad} objetos ({fecha.strftime('%d/%m/%Y %H:%M')})"
+            for vendedor, cantidad, fecha in registro_ventas
+        ]
+    )
     if not registro:
         registro = "No hay registros de ventas aún."
 
@@ -149,7 +159,7 @@ async def actualizar_embed_fijo():
     embed.add_field(name="Registro de Ventas", value=registro, inline=False)
 
     view = SumarView()
-    await embed_message.edit(embed=embed, view=view)  # Actualiza el mensaje del embed
+    await embed_message.edit(embed=embed, view=view)
 
 
 async def enviar_notificacion_limite():
@@ -159,10 +169,12 @@ async def enviar_notificacion_limite():
         print(f"No se encontró el canal con ID: {NOTIFICATION_CHANNEL_ID}")
         return
 
-    registro = "\n".join([
-        f"{vendedor}: {cantidad} objetos ({fecha.strftime('%d/%m/%Y %H:%M')})"
-        for vendedor, cantidad, fecha in registro_ventas
-    ])
+    registro = "\n".join(
+        [
+            f"{vendedor}: {cantidad} objetos ({fecha.strftime('%d/%m/%Y %H:%M')})"
+            for vendedor, cantidad, fecha in registro_ventas
+        ]
+    )
     if not registro:
         registro = "No hay registros de ventas."
 
@@ -174,34 +186,56 @@ async def enviar_notificacion_limite():
     await notification_channel.send(embed=embed)
 
 
+async def programar_reinicios():
+    """Programa los reinicios automáticos en los horarios definidos."""
+    global total_count, registro_ventas, proximo_reinicio
+    while True:
+        now = datetime.now(pytz.timezone("Europe/Madrid"))
+        reinicio_horas = [
+            datetime.strptime(h, "%H:%M").replace(
+                year=now.year, month=now.month, day=now.day, tzinfo=pytz.timezone("Europe/Madrid")
+            )
+            for h in REINICIO_HORARIOS
+        ]
+
+        proximos = [h for h in reinicio_horas if h > now]
+        if not proximos:
+            proximos = [h + timedelta(days=1) for h in reinicio_horas]
+
+        proximo_reinicio = min(proximos)
+        tiempo_restante = (proximo_reinicio - now).total_seconds()
+
+        await asyncio.sleep(tiempo_restante)
+
+        total_count = 0
+        registro_ventas = []
+        await actualizar_embed_fijo()
+
+
+# Comando para reinicio manual
 @bot.command()
 async def reiniciomanual(ctx):
-    """Comando para reiniciar el total manualmente"""
     global total_count, registro_ventas
     total_count = 0
     registro_ventas = []
     await actualizar_embed_fijo()
-
-    try:
-        await ctx.message.delete()
-        msg = await ctx.send("El total se ha reiniciado manualmente a 0.")
-        await asyncio.sleep(10)
-        await msg.delete()
-    except discord.errors.NotFound:
-        print("El mensaje ya no existe o no pudo ser encontrado.")
+    await ctx.message.delete()
+    msg = await ctx.send("El total se ha reiniciado manualmente a 0.")
+    await asyncio.sleep(10)
+    await msg.delete()
 
 
 # Servidor Flask para mantener Replit activo
-app = Flask('')
+app = Flask("")
 
 
-@app.route('/')
+@app.route("/")
 def home():
     return "¡El bot está activo!"
 
 
 def run():
-    app.run(host='0.0.0.0', port=8080)
+    app.run(host="0.0.0.0", port=8080)
 
 
 t = Thread(target=run)
